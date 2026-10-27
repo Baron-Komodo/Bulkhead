@@ -1,0 +1,44 @@
+X fix image quand on quitte ca rende de la merde
+$ faire tout le système d'attaque et déf
+X mettre obstacle vivant comme pirate qui vont piller des bateaxu
+ - faire recherche antipirate
+pouvoir voir info naval vessels
+get navl logos
+X click droit deploy boat
+$ faire animation
+faire music
+$ mettre drapeau
+limiter bateau a ce qu'on a
+X passive income pour éviter de trop dépenser dans le vide
+fix navigation
+X checker si les détroit et canaux
+X on ne voit pas les bateaux de marchandises
+X Pour chaque port on peux les améliorer 4 fois avec vie/def/atk et slot augmenté
+X   au début 2 slot + 1 + 1+ 1...
+  -1 Brouilleur: brouille les communications quand proche de ce port
+  -2 Chantier Naval: permet de construire des navires de guerre
+  -3 Port de commerce: +15% d'or pour toutes les marchandises partant de ce port
+  -4 batterie artilleur: améliore grandement l'attaque de ce port face aux ennemis
+  -5 blindage acier: améliore la défense et la vie du port
+  -6 Tour de controle: permet aux ports de repérer plus de bateaux plus loin
+  -7 Torpedo striker: offensive against submarines
+  -8 Aéroport: débloque, défense proche amélioré contre bateau, attaque par avions et kamikaze (coute de l'argent)
+
+faire outpost de pirate
+X faire des recherches liées entre elles comme sur factorio
+X mettre de la vie + def + atk aux ports
+X peut choisir type d'attaque aux bateaux (lourdes => +long, légère - long)
+0 peut choisir le type de positionnement (
+   offensif -> attaque que en riposte
+   defensif -> n'attaque pas mais fortifie la défense
+   attaque -> attaque chaque bateaux le plus proches
+)
+
+X peut etre remove les ports super proche
+revoir le système de claim des ports avec de l'or simplement
+
+X add health, def, atk to vessels
+les recherches coutent de l'or
+faire un système de nation ou de régions avec généraux etc...
+pensez à ajouter les autres type de bateaux
+drones?

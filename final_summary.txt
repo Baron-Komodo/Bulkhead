@@ -1,0 +1,52 @@
+=== SUMMARY OF CHANGES ===
+
+1. Modified military_vessels.json:
+   - Added `power`, `defense`, `health` fields to each vessel.
+   - Transformed the `armament` array from strings to structured Armament objects.
+   - Power derived from unit cost in ships_built field.
+   - Defense = displacement * 0.5.
+   - Health = displacement * 2.0.
+   - Armament objects include all fields matching the C++ Armament struct:
+        id, name, type, category (int: 0=light,1=medium,2=heavy), description,
+        damage, power (weapon power), reload_time, ammo,
+        is_efficient_against_ships, is_efficient_against_submarine,
+        radius, cost (per ammo unit).
+
+2. Updated src/data.h:
+   - Fixed the Armament::getCategory method to map correctly:
+        0 -> "light", 1 -> "medium", 2 -> "heavy", else -> "unknown".
+   - Confirmed that NavalVessel struct now includes:
+        float health;
+        float defense;
+        float power;
+        std::vector<Armament> armament;
+
+3. Updated src/data.cpp:
+   - Modified `Catalog::loadNavalShips` to read the new fields:
+        vessel.power = row.value("power", 0.0f);
+        vessel.health = row.value("health", 0.0f);
+        vessel.defense = row.value("defense", 0.0f);
+        and the armament array from JSON.
+
+4. Updated src/ui.cpp:
+   - In `drawMapScreen`, inside the loop that draws each naval unit, after drawing the hull/triangle,
+     added code to:
+        * Look up the NavalVessel by unit.classId.
+        * Compute total power = vessel.power + sum of armament.power.
+        * Draw text labels for "Health: <value>" and "Power: <totalPower>" below the unit.
+   - The shipyard modal (drawShipyardPanel) already loops over vessel.armament and displays
+     each armament's details (name, type, category, damage, power, reload time, ammo,
+     efficiencies, radius, cost). Since we updated the NavalVessel struct to include
+     armament, the modal will now show the structured armament data.
+
+5. File backup:
+   - Original military_vessels.json backed up as military_vessels.json.backup.
+
+=== VALIDATION ===
+- All 605 vessels have power, defense, health fields.
+- All 605 vessels have armament as a list of Armament objects.
+- Sample vessel (35M FPV): Power=20.0, Defense=60.0, Health=240.0, armament count=3.
+- Sample submarine (Glenard P. Lipscomb-class): Power=590.6, Defense=2953.0, Health=11812.0,
+  armament includes torpedo (type=torpedo, category=2) with appropriate values.
+
+The JSON file is valid and ready for use in the game system.

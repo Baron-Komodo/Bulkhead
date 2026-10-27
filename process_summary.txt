@@ -1,0 +1,36 @@
+Processing Summary:
+==================
+
+Input file: military_vessels.json (original)
+Output file: military_vessels.json (modified in-place)
+Backup: military_vessels.json.backup
+
+Statistics:
+- Total vessels processed: 605
+- Vessels with power, defense, health added: 605
+- Vessels with armament transformed to structured objects: 605
+
+Added fields per vessel:
+- power: float (derived from unit cost in ships_built field)
+- defense: float (displacement * 0.5)
+- health: float (displacement * 2.0)
+
+Armament transformation:
+- Each armament string parsed to extract quantity and description
+- Weapon type determined: machine gun, torpedo, rocket, missile, gun
+- FireCategory mapped to integer: light=0, medium=1, heavy=2
+- Estimated values assigned for damage, power, reload_time, ammo, etc.
+- Boolean flags set for efficiency against ships/submarines
+- Radius and cost per ammo unit estimated
+
+Sample results:
+- 35M FPV (Fast Patrol Vessel)-class:
+  * Power: 20.0, Defense: 60.0, Health: 240.0
+  * Armament: 3 items including 30mm Cannon (gun, category=1)
+
+- Glenard P. Lipscomb-class (SSN-685) submarine:
+  * Power: 590.6, Defense: 2953.0, Health: 11812.0
+  * Armament includes torpedo: type=torpedo, category=2 (heavy)
+    - Efficient against ships: true, submarines: true
+
+All JSON structure preserved, file remains valid.

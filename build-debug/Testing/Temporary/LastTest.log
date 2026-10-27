@@ -1,0 +1,18 @@
+Start testing: Oct 18 15:32 Paris, Madrid (heure d’été)
+----------------------------------------------------------
+1/1 Testing: logic_tests
+1/1 Test: logic_tests
+Command: "C:/Users/LordN.NASHOU/Desktop/code/maritime_traffic/sea-builder-desktop/build-debug/logic_tests.exe"
+Directory: C:/Users/LordN.NASHOU/Desktop/code/maritime_traffic/sea-builder-desktop
+"logic_tests" start time: Oct 18 15:32 Paris, Madrid (heure d’été)
+Output:
+----------------------------------------------------------
+<end of output>
+Test time =   2.93 sec
+----------------------------------------------------------
+Test Failed.
+"logic_tests" end time: Oct 18 15:32 Paris, Madrid (heure d’été)
+"logic_tests" time elapsed: 00:00:02
+----------------------------------------------------------
+
+End testing: Oct 18 15:32 Paris, Madrid (heure d’été)

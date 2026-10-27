@@ -1,0 +1,41 @@
+Start testing: Oct 27 23:11 Paris, Madrid
+----------------------------------------------------------
+1/1 Testing: logic_tests
+1/1 Test: logic_tests
+Command: "C:/Users/LordN.NASHOU/Desktop/code/maritime_traffic/sea-builder-desktop/build/logic_tests.exe"
+Directory: C:/Users/LordN.NASHOU/Desktop/code/maritime_traffic/sea-builder-desktop
+"logic_tests" start time: Oct 27 23:11 Paris, Madrid
+Output:
+----------------------------------------------------------
+geo
+voyage economy
+hull classes and berths
+catalog
+  FAIL: 3630 ports
+sea routing
+  FAIL: golden ports 1504/1047 present
+  FAIL: water route ports 1504/1047 present
+fire control
+fire rate
+game state
+port upgrades
+
+naval units
+fleets and admirals
+
+bot aggression
+
+rival powers
+port defences
+harbour siege
+
+372/375 checks passed
+<end of output>
+Test time =   0.96 sec
+----------------------------------------------------------
+Test Failed.
+"logic_tests" end time: Oct 27 23:11 Paris, Madrid
+"logic_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 27 23:11 Paris, Madrid

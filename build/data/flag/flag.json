@@ -1,0 +1,504 @@
+{
+  "country": [
+    {
+      "country": "Afghanistan",
+      "country_code": "af",
+      "image_path": "data/flag/af.png"
+    },
+    {
+      "country": "Albania",
+      "country_code": "al",
+      "image_path": "data/flag/al.png"
+    },
+    {
+      "country": "Algeria",
+      "country_code": "dz",
+      "image_path": "data/flag/dz.png"
+    },
+    {
+      "country": "Andorra",
+      "country_code": "ad",
+      "image_path": "data/flag/ad.png"
+    },
+    {
+      "country": "Angola",
+      "country_code": "ao",
+      "image_path": "data/flag/ao.png"
+    },
+    {
+      "country": "Antigua and Barbuda",
+      "country_code": "ag",
+      "image_path": "data/flag/ag.png"
+    },
+    {
+      "country": "Argentina",
+      "country_code": "ar",
+      "image_path": "data/flag/ar.png"
+    },
+    {
+      "country": "Armenia",
+      "country_code": "am",
+      "image_path": "data/flag/am.png"
+    },
+    {
+      "country": "Australia",
+      "country_code": "au",
+      "image_path": "data/flag/au.png"
+    },
+    {
+      "country": "Austria",
+      "country_code": "at",
+      "image_path": "data/flag/at.png"
+    },
+    {
+      "country": "Azerbaijan",
+      "country_code": "az",
+      "image_path": "data/flag/az.png"
+    },
+    {
+      "country": "Bahamas",
+      "country_code": "bs",
+      "image_path": "data/flag/bs.png"
+    },
+    {
+      "country": "Bahrain",
+      "country_code": "bh",
+      "image_path": "data/flag/bh.png"
+    },
+    {
+      "country": "Bangladesh",
+      "country_code": "bd",
+      "image_path": "data/flag/bd.png"
+    },
+    {
+      "country": "Barbados",
+      "country_code": "bb",
+      "image_path": "data/flag/bb.png"
+    },
+    {
+      "country": "Belarus",
+      "country_code": "by",
+      "image_path": "data/flag/by.png"
+    },
+    {
+      "country": "Belgium",
+      "country_code": "be",
+      "image_path": "data/flag/be.png"
+    },
+    {
+      "country": "Belize",
+      "country_code": "bz",
+      "image_path": "data/flag/bz.png"
+    },
+    {
+      "country": "Benin",
+      "country_code": "bj",
+      "image_path": "data/flag/bj.png"
+    },
+    {
+      "country": "Bhutan",
+      "country_code": "bt",
+      "image_path": "data/flag/bt.png"
+    },
+    {
+      "country": "Bolivia",
+      "country_code": "bo",
+      "image_path": "data/flag/bo.png"
+    },
+    {
+      "country": "Bosnia and Herzegovina",
+      "country_code": "ba",
+      "image_path": "data/flag/ba.png"
+    },
+    {
+      "country": "Botswana",
+      "country_code": "bw",
+      "image_path": "data/flag/bw.png"
+    },
+    {
+      "country": "Brazil",
+      "country_code": "br",
+      "image_path": "data/flag/br.png"
+    },
+    {
+      "country": "Brunei",
+      "country_code": "bn",
+      "image_path": "data/flag/bn.png"
+    },
+    {
+      "country": "Bulgaria",
+      "country_code": "bg",
+      "image_path": "data/flag/bg.png"
+    },
+    {
+      "country": "Burkina Faso",
+      "country_code": "bf",
+      "image_path": "data/flag/bf.png"
+    },
+    {
+      "country": "Burundi",
+      "country_code": "bi",
+      "image_path": "data/flag/bi.png"
+    },
+    {
+      "country": "Cabo Verde",
+      "country_code": "cv",
+      "image_path": "data/flag/cv.png"
+    },
+    {
+      "country": "Cambodia",
+      "country_code": "kh",
+      "image_path": "data/flag/kh.png"
+    },
+    {
+      "country": "Cameroon",
+      "country_code": "cm",
+      "image_path": "data/flag/cm.png"
+    },
+    {
+      "country": "Canada",
+      "country_code": "ca",
+      "image_path": "data/flag/ca.png"
+    },
+    {
+      "country": "Central African Republic",
+      "country_code": "cf",
+      "image_path": "data/flag/cf.png"
+    },
+    {
+      "country": "Chad",
+      "country_code": "td",
+      "image_path": "data/flag/td.png"
+    },
+    {
+      "country": "Chile",
+      "country_code": "cl",
+      "image_path": "data/flag/cl.png"
+    },
+    {
+      "country": "China",
+      "country_code": "cn",
+      "image_path": "data/flag/cn.png"
+    },
+    {
+      "country": "Colombia",
+      "country_code": "co",
+      "image_path": "data/flag/co.png"
+    },
+    {
+      "country": "Comoros",
+      "country_code": "km",
+      "image_path": "data/flag/km.png"
+    },
+    {
+      "country": "Congo",
+      "country_code": "cg",
+      "image_path": "data/flag/cg.png"
+    },
+    {
+      "country": "Democratic Republic of the Congo",
+      "country_code": "cd",
+      "image_path": "data/flag/cd.png"
+    },
+    {
+      "country": "Costa Rica",
+      "country_code": "cr",
+      "image_path": "data/flag/cr.png"
+    },
+    {
+      "country": "Cote d'Ivoire",
+      "country_code": "ci",
+      "image_path": "data/flag/ci.png"
+    },
+    {
+      "country": "Croatia",
+      "country_code": "hr",
+      "image_path": "data/flag/hr.png"
+    },
+    {
+      "country": "Cuba",
+      "country_code": "cu",
+      "image_path": "data/flag/cu.png"
+    },
+    {
+      "country": "Cyprus",
+      "country_code": "cy",
+      "image_path": "data/flag/cy.png"
+    },
+    {
+      "country": "Czech Republic",
+      "country_code": "cz",
+      "image_path": "data/flag/cz.png"
+    },
+    {
+      "country": "Denmark",
+      "country_code": "dk",
+      "image_path": "data/flag/dk.png"
+    },
+    {
+      "country": "Djibouti",
+      "country_code": "dj",
+      "image_path": "data/flag/dj.png"
+    },
+    {
+      "country": "Dominica",
+      "country_code": "dm",
+      "image_path": "data/flag/dm.png"
+    },
+    {
+      "country": "Dominican Republic",
+      "country_code": "do",
+      "image_path": "data/flag/do.png"
+    },
+    {
+      "country": "Ecuador",
+      "country_code": "ec",
+      "image_path": "data/flag/ec.png"
+    },
+    {
+      "country": "Egypt",
+      "country_code": "eg",
+      "image_path": "data/flag/eg.png"
+    },
+    {
+      "country": "El Salvador",
+      "country_code": "sv",
+      "image_path": "data/flag/sv.png"
+    },
+    {
+      "country": "Equatorial Guinea",
+      "country_code": "gq",
+      "image_path": "data/flag/gq.png"
+    },
+    {
+      "country": "Eritrea",
+      "country_code": "er",
+      "image_path": "data/flag/er.png"
+    },
+    {
+      "country": "Estonia",
+      "country_code": "ee",
+      "image_path": "data/flag/ee.png"
+    },
+    {
+      "country": "Eswatini",
+      "country_code": "sz",
+      "image_path": "data/flag/sz.png"
+    },
+    {
+      "country": "Ethiopia",
+      "country_code": "et",
+      "image_path": "data/flag/et.png"
+    },
+    {
+      "country": "Fiji",
+      "country_code": "fj",
+      "image_path": "data/flag/fj.png"
+    },
+    {
+      "country": "Finland",
+      "country_code": "fi",
+      "image_path": "data/flag/fi.png"
+    },
+    {
+      "country": "France",
+      "country_code": "fr",
+      "image_path": "data/flag/fr.png"
+    },
+    {
+      "country": "Gabon",
+      "country_code": "ga",
+      "image_path": "data/flag/ga.png"
+    },
+    {
+      "country": "Gambia",
+      "country_code": "gm",
+      "image_path": "data/flag/gm.png"
+    },
+    {
+      "country": "Georgia",
+      "country_code": "ge",
+      "image_path": "data/flag/ge.png"
+    },
+    {
+      "country": "Germany",
+      "country_code": "de",
+      "image_path": "data/flag/de.png"
+    },
+    {
+      "country": "Ghana",
+      "country_code": "gh",
+      "image_path": "data/flag/gh.png"
+    },
+    {
+      "country": "Greece",
+      "country_code": "gr",
+      "image_path": "data/flag/gr.png"
+    },
+    {
+      "country": "Grenada",
+      "country_code": "gd",
+      "image_path": "data/flag/gd.png"
+    },
+    {
+      "country": "Guatemala",
+      "country_code": "gt",
+      "image_path": "data/flag/gt.png"
+    },
+    {
+      "country": "Guinea",
+      "country_code": "gn",
+      "image_path": "data/flag/gn.png"
+    },
+    {
+      "country": "Guinea-Bissau",
+      "country_code": "gw",
+      "image_path": "data/flag/gw.png"
+    },
+    {
+      "country": "Guyana",
+      "country_code": "gy",
+      "image_path": "data/flag/gy.png"
+    },
+    {
+      "country": "Haiti",
+      "country_code": "ht",
+      "image_path": "data/flag/ht.png"
+    },
+    {
+      "country": "Honduras",
+      "country_code": "hn",
+      "image_path": "data/flag/hn.png"
+    },
+    {
+      "country": "Hungary",
+      "country_code": "hu",
+      "image_path": "data/flag/hu.png"
+    },
+    {
+      "country": "Iceland",
+      "country_code": "is",
+      "image_path": "data/flag/is.png"
+    },
+    {
+      "country": "India",
+      "country_code": "in",
+      "image_path": "data/flag/in.png"
+    },
+    {
+      "country": "Indonesia",
+      "country_code": "id",
+      "image_path": "data/flag/id.png"
+    },
+    {
+      "country": "Iran",
+      "country_code": "ir",
+      "image_path": "data/flag/ir.png"
+    },
+    {
+      "country": "Iraq",
+      "country_code": "iq",
+      "image_path": "data/flag/iq.png"
+    },
+    {
+      "country": "Ireland",
+      "country_code": "ie",
+      "image_path": "data/flag/ie.png"
+    },
+    {
+      "country": "Israel",
+      "country_code": "il",
+      "image_path": "data/flag/il.png"
+    },
+    {
+      "country": "Italy",
+      "country_code": "it",
+      "image_path": "data/flag/it.png"
+    },
+    {
+      "country": "Jamaica",
+      "country_code": "jm",
+      "image_path": "data/flag/jm.png"
+    },
+    {
+      "country": "Japan",
+      "country_code": "jp",
+      "image_path": "data/flag/jp.png"
+    },
+    {
+      "country": "Jordan",
+      "country_code": "jo",
+      "image_path": "data/flag/jo.png"
+    },
+    {
+      "country": "Kazakhstan",
+      "country_code": "kz",
+      "image_path": "data/flag/kz.png"
+    },
+    {
+      "country": "Kenya",
+      "country_code": "ke",
+      "image_path": "data/flag/ke.png"
+    },
+    {
+      "country": "Kiribati",
+      "country_code": "ki",
+      "image_path": "data/flag/ki.png"
+    },
+    {
+      "country": "North Korea",
+      "country_code": "kp",
+      "image_path": "data/flag/kp.png"
+    },
+    {
+      "country": "South Korea",
+      "country_code": "kr",
+      "image_path": "data/flag/kr.png"
+    },
+    {
+      "country": "Kuwait",
+      "country_code": "kw",
+      "image_path": "data/flag/kw.png"
+    },
+    {
+      "country": "Kyrgyzstan",
+      "country_code": "kg",
+      "image_path": "data/flag/kg.png"
+    },
+    {
+      "country": "Laos",
+      "country_code": "la",
+      "image_path": "data/flag/la.png"
+    },
+    {
+      "country": "Latvia",
+      "country_code": "lv",
+      "image_path": "data/flag/lv.png"
+    },
+    {
+      "country": "Lebanon",
+      "country_code": "lb",
+      "image_path": "data/flag/lb.png"
+    },
+    {
+      "country": "Lesotho",
+      "country_code": "ls",
+      "image_path": "data/flag/ls.png"
+    },
+    {
+      "country": "Liberia",
+      "country_code": "lr",
+      "image_path": "data/flag/lr.png"
+    },
+    {
+      "country": "Libya",
+      "country_code": "ly",
+      "image_path": "data/flag/ly.png"
+    },
+    {
+      "country": "Liechtenstein",
+      "country_code": "li",
+      "image_path": "data/flag/li.png"
+    }
+  ]
+}
