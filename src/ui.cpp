@@ -62,9 +62,12 @@ constexpr Color kGreen = {92, 176, 92, 255};
 constexpr Color kBlue = {94, 152, 196, 255};
 constexpr Color kRed = {204, 76, 68, 255};
 constexpr Color kGold = {232, 163, 61, 255};
-// The bot player's colour: distinct from the player's blue ports and white fleet, but not the
-// alarm red reserved for selection, so another player's boat reads as a rival, not a warning.
+// The enemy powers' colour: distinct from the player's blue ports and white fleet, but not the
+// alarm red reserved for selection, so another nation's boat reads as a rival, not a warning.
 constexpr Color kBot = {206, 164, 236, 255};
+// A pirate band is the other kind of hostile: not a nation's warship but a fixed obstacle on
+// its own patch of water. A burnt orange keeps it apart from the powers' lilac on the map.
+constexpr Color kPirate = {222, 122, 58, 255};
 constexpr Color kShadow = {0, 0, 0, 120};
 
 // --- Chrome primitives ------------------------------------------------------ //
@@ -689,6 +692,7 @@ void App::drawBottomBar() {
                       {"FLEET MANAGER", Screen::Fleet},
                       {"RESEARCH", Screen::Research},
                       {"ADMIRALTY", Screen::FleetCommand},
+                      {"GOVERNEMENT", Screen::FleetCommand},
                       };
 
   // File-folder tabs, bottom-aligned and body-connected: the active one sits proud of the bar
@@ -846,11 +850,13 @@ void App::drawMapScreen() {
   }
 
   // --- Bot boats ------------------------------------------------------------
-  // Boats owned by the bot player. The hull itself is an ordinary boat: the same baked sprite
-  // sheet and the same untinted draw the player's own ships use, so it does not read as
-  // terrain or as a special unit. What marks it as another player's is the owner's ring and
-  // the caption naming the owner. A hull under the cursor is outlined so the player can see
-  // that a right click will be an attack order rather than a move.
+  // The boats the player does not command: an enemy power's warship or a pirate band's sentry.
+  // The hull itself is an ordinary boat: the same baked sprite sheet and the same untinted draw
+  // the player's own ships use, so it does not read as terrain or as a special unit. What marks
+  // it as hostile is the caption naming the owner, coloured by kind - lilac for an enemy power,
+  // burnt orange for a pirate band - so the two are never confused on the map. A hull under the
+  // cursor is outlined so the player can see that a right click will be an attack order rather
+  // than a move.
   const int hoveredBoatId = botBoatAtScreen(mouse, 26.0f);
   for (const BotBoat& boat : game_.botBoats()) {
     if (boat.sunk()) continue;
@@ -915,12 +921,13 @@ void App::drawMapScreen() {
     // At world zoom every rival's nameplate overlaps every other one, turning whole
     // continents into a wall of purple text. Keep the hulls visible, but only spell out a
     // bot boat when the map is close enough to read it or the player is interacting with it.
+    const Color hostileColor = boat.pirate ? kPirate : kBot;
     const bool showBotCaption = map_.scale() >= 6.0f || hoveredBoatId == boat.id || targeted;
     if (showBotCaption) {
       const std::string caption = boat.owner + " - " + boat.name;
       const Vector2 text = measureText(caption, 15.0f, FontWeight::SemiBold);
-      label(caption, screen.x - text.x * 0.5f, screen.y - length * 0.75f - 16.0f, 15.0f, kBot,
-            FontWeight::SemiBold);
+      label(caption, screen.x - text.x * 0.5f, screen.y - length * 0.75f - 16.0f, 15.0f,
+            hostileColor, FontWeight::SemiBold);
     }
 
     if (boat.sunk()) continue;
@@ -1118,12 +1125,13 @@ void App::drawMapScreen() {
       const Rectangle panel{x, y, panelWidth, panelHeight};
       raisedPanel(panel);
       headerStrip({panel.x + 4.0f, panel.y + 4.0f, panel.width - 8.0f, 24.0f});
-      label("HOSTILE CONTACT", panel.x + 12.0f, panel.y + 8.0f, 13.0f, kText,
-            FontWeight::Bold);
+      // The title says what the hull is: a band's sentry on a station, or a nation's warship.
+      label(boat->pirate ? "PIRATE BAND" : "HOSTILE CONTACT", panel.x + 12.0f, panel.y + 8.0f,
+            13.0f, kText, FontWeight::Bold);
       const std::string owner = trimTo(boat->owner.empty() ? "UNKNOWN" : boat->owner, 16);
       label(owner, panel.x + panel.width - 12.0f -
                        measureText(owner, 11.0f, FontWeight::SemiBold).x,
-            panel.y + 9.0f, 11.0f, kBot, FontWeight::SemiBold);
+            panel.y + 9.0f, 11.0f, boat->pirate ? kPirate : kBot, FontWeight::SemiBold);
 
       label(trimTo(boat->name, 30), panel.x + 12.0f, panel.y + 36.0f, 16.0f, kAccent,
             FontWeight::Bold);
@@ -1503,6 +1511,7 @@ void App::drawPortPanel() {
         std::to_string(game_.portLevel(port.id)));
         // upgrade stats
         Port* portM = catalog_.portByIdM(port.id);
+        portM->maxFisher ++;
         portM->attack *= 1.15;
         portM->def *= 1.15;
         portM->health *= 1.15;
@@ -1522,7 +1531,10 @@ void App::drawPortPanel() {
   const float closeY = panel.y + panel.height - 44.0f;
   const float boxSize = 56.0f;
   const float boxGap = 6.0f;
-  const float modulesBoxY = closeY - 10.0f - boxSize;
+  // The fisher row takes the strip just above the action row, so the module slots anchor
+  // above it instead of against the Close button.
+  const float fisherRowY = closeY - 40.0f;
+  const float modulesBoxY = fisherRowY - 8.0f - boxSize;
   const float modulesLabelY = modulesBoxY - 20.0f;
 
   if (trade != nullptr) {
@@ -1626,6 +1638,24 @@ void App::drawPortPanel() {
       (panel.width - 28.0f - actionGap * static_cast<float>(actionCount - 1)) /
       static_cast<float>(actionCount);
   float actionX = panel.x + 14.0f;
+
+  // Fishermen: each crew posted to a port you own adds 50 to the passive income every
+  // second, up to the port's capacity. Only the owner can hire, so a rival's harbour shows
+  // just the count. The row gets its own strip above the action buttons so it never overlaps
+  // Armement or Close.
+  const float fisherButtonWidth = 132.0f;
+  label("FISHERMEN  " + std::to_string(port.activeFisher) + " / " +
+            std::to_string(port.maxFisher),
+        panel.x + 14.0f, fisherRowY + 8.0f, 15.0f, kAccent, FontWeight::SemiBold);
+  if (owned &&
+      button({panel.x + panel.width - 14.0f - fisherButtonWidth, fisherRowY, fisherButtonWidth,
+              30.0f},
+             "Engage fisherman", port.activeFisher < port.maxFisher && game_.money() >= 300 * port.activeFisher && game_.isTechAcquired("fishing"))) {
+    if (Port* portM = catalog_.portByIdM(port.id)) {
+      portM->activeFisher = std::min(portM->activeFisher + 1, portM->maxFisher);
+      game_.changeMoney(-300 * port.activeFisher);
+    }
+  }
 
   if (owned) {
     if (button({actionX, closeY, actionWidth, 32.0f}, "Armement", true)) {
@@ -5110,7 +5140,14 @@ std::string App::debugStatus() const {
     out << " progress=" << voyage.progress << " km=" << voyage.distanceKm;
   }
   out << " projectiles=" << game_.projectiles().size();
-  // The rival powers, one line each: what they hold, what they have and what is afloat. It is
+  // The pirate bands, as a single count: they hold nothing and run nothing, so all a script
+  // needs to know is that they are on the water. Their hulls are counted apart from a power's.
+  int pirateHulls = 0;
+  for (const BotBoat& boat : game_.botBoats()) {
+    if (boat.pirate && !boat.sunk()) ++pirateHulls;
+  }
+  out << " pirates=" << pirateHulls;
+  // The enemy powers, one line each: what they hold, what they have and what is afloat. It is
   // how a scripted run can be checked for the opponents' economy actually running.
   out << " rivals=" << game_.factions().size() << " merchants=" << game_.merchantRuns().size();
   for (size_t index = 0; index < game_.factions().size(); ++index) {

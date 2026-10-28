@@ -173,25 +173,32 @@ struct NavalUnit {
   bool healing() const { return healPortId != 0; }
 };
 
-/// How far a bot hull notices one of the player's ships, from its own longest reach. A corsair
+/// How far an enemy hull notices one of the player's ships, from its own longest reach. It
 /// reacts to the traffic in its own stretch of water, not to a hull on the far side of the sea;
-/// getting shot at is the other trigger, and that one ignores this radius.
+/// getting shot at is the other trigger, and that one ignores this radius. A pirate never hunts,
+/// so this radius is an enemy power's alone.
 double botHuntRadiusKm(double reachKm);
 
-/// A warship belonging to a rival power: the same kind of hull the player commands, but owned
-/// by another faction rather than the player. It is not part of the player's fleet, so it
-/// cannot be selected or ordered. It does fight on its own terms: when one of the player's
-/// ships comes into its own waters, or shoots at it, it hunts that ship, steams to the edge of
-/// its own weapon range and shoots from there, so it is never a target that only shoots once
-/// the player has run it down. A rival's hull is paid for out of that power's treasury and
-/// laid down at its own yard, so sinking one costs it money and a berth, not a respawn.
+/// A warship afloat that the player does not command. The map carries two kinds of them, and
+/// they behave differently:
+/// - An enemy power's hull (`pirate == false`): the same kind of ship the player commands, but
+///   owned by another nation rather than the player. It is not part of the player's fleet, so
+///   it cannot be selected or ordered. It does fight on its own terms: when one of the player's
+///   ships comes into its own waters, or shoots at it, it hunts that ship, steams to the edge of
+///   its own weapon range and shoots from there. It is paid for out of that power's treasury
+///   and laid down at its own yard, so sinking one costs it money and a berth, not a respawn.
+/// - A pirate band's hull (`pirate == true`): a preset hull placed on an anchor. It has no
+///   yard, no purse and no fleet, and it never leaves its station: it does not chase, trade,
+///   build or take a harbour. It only fires at whatever comes inside its own gun range.
 struct BotBoat {
   int id = 0;
   std::string name;   // the hull's name
-  std::string owner;  // the rival power that owns it, shown on the map
+  std::string owner;  // the pirate band or enemy power that owns it, shown on the map
+  bool pirate = false;  // a band's sentry on a station, not an enemy power's warship
   int classId = 0;    // NavalVessel the hull was laid down from, 0 for a kind's own preset
-  int homePortId = 0; // the yard that built it and where it tops its magazines up
+  int homePortId = 0; // the yard that built it and where it tops its magazines up, 0 for none
   LatLng position;
+  LatLng station;     // the anchor a pirate holds; unused by an enemy power's hull
   double headingDeg = 0.0;                          // facing, degrees clockwise from north
   NavalModelKind kind = NavalModelKind::other;  // which baked hull sprite to draw
 
@@ -258,30 +265,43 @@ struct CombatEvent {
   bool victimIsAlly = false;
 };
 
-  struct Anchor {
-    const char* name;
-    const char* owner;
-    LatLng position;
-    double heading;
-    NavalModelKind kind;
-  };
+/// One pirate hull's station: the name it flies, where it sits in the world and which way it
+/// faces. A pirate band is a fixed group of these, placed once when a game starts.
+struct Anchor {
+  const char* name;
+  LatLng position;
+  double heading;
+  NavalModelKind kind;
+};
 
-/// One pirate faction: the name its hulls fly and the anchor points they are placed at when a
-/// game starts. The list is fixed data, but the commander reads it too, so a faction that has
-/// been wiped out can be rebuilt from the same anchors it began at.
-struct BotFaction {
+/// One pirate band: the name its hulls fly and the station each of them holds. Pirates are not
+/// players: they have no ports, no purse and no research, and they never build, trade or take
+/// anything. They are a fixed obstacle on a patch of water that shoots at what sails into their
+/// own gun range, and that is all they ever do. The list is fixed data, so a band that has been
+/// wiped out can be rebuilt from the same stations it began at.
+struct PirateBand {
   std::string name;
   std::vector<Anchor> anchors;
 };
 
-const std::vector<BotFaction>& botFactions();
+const std::vector<PirateBand>& pirateBands();
 
-// --- Rival powers ------------------------------------------------------------
+// --- Enemy powers ------------------------------------------------------------
 // An opponent is a player, not a swarm: it owns ports, earns money from them, runs merchant
 // crossings that pay freight and research points, lays hulls down at its own yard and spends
-// those points on a research programme. It is seeded from the faction roster above - the same
-// three powers, each with waters of its own - but from then on it lives off its economy, so
-// sinking its ships and taking its harbours hurts it the way it would hurt the player.
+// those points on a research programme. It is seeded from the nation roster below - each is
+// handed the real harbour nearest its own waters - but from then on it lives off its economy,
+// so sinking its ships and taking its harbours hurts it the way it would hurt the player.
+// Nothing about an enemy power is placed on an anchor: it buys everything it has.
+
+/// One enemy power: the nation's name, which is the owner string its hulls carry on the map,
+/// and the waters it starts in, which decide the real harbour it is handed at the start.
+struct EnemyPower {
+  std::string name;
+  LatLng waters;
+};
+
+const std::vector<EnemyPower>& enemyPowers();
 
 /// One AI opponent's economy and war effort.
 struct AIPlayer {
@@ -398,12 +418,14 @@ class GameState {
   const NavalUnit* navalUnitById(int id) const;
   size_t navalUnitCount() const { return navalUnits_.size(); }
 
-  /// The boats the bot player owns, drawn on the map with their owner's name. They cannot be
-  /// selected or ordered, but they hunt the player's ships and fight them at range.
+  /// Every boat afloat that the player does not command: the enemy powers' warships and the
+  /// pirate bands' sentries, drawn on the map with their owner's name. They cannot be selected
+  /// or ordered, but they fight the player's ships at range - an enemy hull hunts, a pirate
+  /// holds its station. `BotBoat::pirate` says which.
   const std::vector<BotBoat>& botBoats() const { return botBoats_; }
   const BotBoat* botBoatById(int id) const;
 
-  /// The rival powers, in the order they were seeded.
+  /// The enemy powers, in the order they were seeded. A pirate band is not one of them.
   const std::vector<AIPlayer>& factions() const { return factions_; }
 
   /// The power that owns a port, or -1 for a port that is neutral or the player's own.
@@ -584,8 +606,9 @@ class GameState {
   /// Sails every moving unit along its course for `dtSeconds` of game time.
   void advanceNavalUnits(double dtSeconds);
 
-  /// Lets each bot hull pick a ship to hunt and steam to its own firing range. Bots close the
-  /// distance themselves instead of waiting to be run down, so an engagement opens at range.
+  /// Lets each enemy hull pick a ship to hunt and steam to its own firing range; an enemy
+  /// closes the distance itself instead of waiting to be run down, so an engagement opens at
+  /// range. A pirate hull is left where it is: holding its station is all it does.
   void advanceBotBoats(double dtSeconds);
 
   /// Runs one step of the fight: reloads every mount, lets both sides fire at what they can
@@ -600,11 +623,12 @@ class GameState {
   /// harbour is never left bare. Does nothing to a port the player has armed.
   void ensurePortArmament(Port& port);
 
-  /// Runs every rival power's economy and war effort for one tick: income from its ports,
-  /// merchant crossings dispatched and settled, hulls laid down, technologies filed.
+  /// Runs every enemy power's economy and war effort for one tick: income from its ports,
+  /// merchant crossings dispatched and settled, hulls laid down, technologies filed. A pirate
+  /// band has none of this to run.
   void updateFactions(double dtSeconds);
 
-  /// Advances every rival merchant crossing and pays the freighter home when it arrives.
+  /// Advances every enemy merchant crossing and pays the freighter home when it arrives.
   void advanceMerchantRuns(double now);
 
   /// Sends a merchant crossing from one of the power's ports. Returns false when it has no
@@ -670,17 +694,22 @@ class GameState {
   /// raises the impact - and, when that was the last of its hit points, the kill.
   void resolveImpact(const Projectile& shot);
 
-  /// Seeds the rival powers at the start of a game: each is given the real harbour nearest
+  /// Seeds the enemy powers at the start of a game: each is given the real harbour nearest
   /// its own waters, an opening hull there and a treasury.
   void seedFactions();
 
-  /// Fills a rival hull's armament, health and defense from the class it was laid down from,
-  /// or from its kind's own preset when it has no class (a save from before hulls had one).
+  /// Places the pirate bands at the start of a game: one sentry on every anchor, armed from
+  /// its kind, owning nothing and belonging to no economy.
+  void seedPirates();
+
+  /// Fills a bot hull's armament, health and defense from the class it was laid down from, or
+  /// from its kind's own preset when it has no class - which is how a pirate sentry, which is
+  /// never laid down from a class, is armed.
   void fitBotArmament(BotBoat& boat) const;
 
-  /// Tops a rival hull's magazines up while it lies at the yard that built it, the way the
-  /// player's ships rearm at their home port: a rival's navy must not run dry for good after
-  /// one fight.
+  /// Tops an enemy hull's magazines up while it lies at the yard that built it, the way the
+  /// player's ships rearm at their home port: an enemy's navy must not run dry for good after
+  /// one fight. A pirate has no yard, so this leaves it alone.
   void rearmBotBoat(BotBoat& boat, double dtSeconds);
 
 

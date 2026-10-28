@@ -288,41 +288,48 @@ double navalUnitCost(const NavalVessel& vessel, bool sameNation) {
   return std::round(cost);
 }
 
-const std::vector<BotFaction>& botFactions() {
-  // Fixed data: three rival powers, each with its own stretch of water. The owner field is the
-  // power's own name - it is what the map prints on a hull and what the game groups its ships
-  // and merchants by, so two powers are never treated as one. The anchors are now only the
-  // seed for a power's home waters: each is handed the real harbour nearest its first anchor
-  // at the start of a game, and lives off that port's economy from then on.
-  static const std::vector<BotFaction> kFactions = {
+const std::vector<PirateBand>& pirateBands() {
+  // Fixed data: three bands, each holding a patch of water. A band's name is what its hulls
+  // fly on the map, and each anchor is one sentry: where it sits, which way it faces and which
+  // hull sprite it draws. Nothing else about a pirate is stored - it has no economy to run and
+  // no harbour to sail from, so these stations are its whole story.
+  static const std::vector<PirateBand> kBands = {
       {"Somali Pirate",
        {
-           {"Somali Pirate", "Somali Pirate", {12.09, 53.29}, 90.0, NavalModelKind::frigate},
-           {"Somali Pirate", "Somali Pirate", {17.03, 50.23}, 75.0, NavalModelKind::other},
-           {"Somali Pirate", "Somali Pirate", {11.06, 55.29}, 200.0, NavalModelKind::cruiser},
-           {"Somali Pirate", "Somali Pirate", {18.08, 51.15}, 45.0, NavalModelKind::patrol},
-           {"Somali Pirate", "Somali Pirate", {10.10, 52.30}, 45.0, NavalModelKind::patrol},
+           {"Sea Wolf", {12.09, 53.29}, 90.0, NavalModelKind::frigate},
+           {"Coral Fang", {17.03, 50.23}, 75.0, NavalModelKind::other},
+           {"Monsoon", {11.06, 55.29}, 200.0, NavalModelKind::cruiser},
+           {"Salt Dhow", {18.08, 51.15}, 45.0, NavalModelKind::patrol},
+           {"Pearl Ghost", {10.10, 52.30}, 45.0, NavalModelKind::patrol},
        }},
       {"Barbary corsairs",
        {
-           {"Barbary corsairs", "Barbary corsairs", {37.82, 3.10}, 90.0,
-            NavalModelKind::patrol},
-           {"Barbary corsairs", "Barbary corsairs", {39.15, 5.89}, 75.0,
-            NavalModelKind::other},
-           {"Barbary corsairs", "Barbary corsairs", {38.14, 9.85}, 200.0,
-            NavalModelKind::frigate},
-           {"Barbary corsairs", "Barbary corsairs", {41.31, 7.65}, 45.0,
-            NavalModelKind::frigate},
+           {"Barbary Falcon", {37.82, 3.10}, 90.0, NavalModelKind::patrol},
+           {"Sirocco", {39.15, 5.89}, 75.0, NavalModelKind::other},
+           {"Scimitar", {38.14, 9.85}, 200.0, NavalModelKind::frigate},
+           {"Sea Ghoul", {41.31, 7.65}, 45.0, NavalModelKind::frigate},
        }},
       {"Ching Shih",
        {
-           {"Ching Shih", "Ching Shih", {29.03, 128.60}, 90.0, NavalModelKind::cruiser},
-           {"Ching Shih", "Ching Shih", {27.08, 132.53}, 75.0, NavalModelKind::patrol},
-           {"Ching Shih", "Ching Shih", {26.30, 124.61}, 200.0, NavalModelKind::frigate},
-           {"Ching Shih", "Ching Shih", {21.83, 125.26}, 45.0, NavalModelKind::patrol},
+           {"Red Banner", {29.03, 128.60}, 90.0, NavalModelKind::cruiser},
+           {"Dragon Tail", {27.08, 132.53}, 75.0, NavalModelKind::patrol},
+           {"Typhoon", {26.30, 124.61}, 200.0, NavalModelKind::frigate},
+           {"Junk Raider", {21.83, 125.26}, 45.0, NavalModelKind::patrol},
        }},
   };
-  return kFactions;
+  return kBands;
+}
+
+const std::vector<EnemyPower>& enemyPowers() {
+  // The nations a game is played against, and the waters each is seeded in. A power is handed
+  // the real harbour nearest its waters as its capital and lives off that port's economy from
+  // then on: there is no anchor to respawn at and nothing on this list is placed on the map.
+  static const std::vector<EnemyPower> kPowers = {
+      {"England", {50.20, -3.80}},
+      {"Spain", {36.40, -6.40}},
+      {"Netherlands", {52.90, 4.10}},
+  };
+  return kPowers;
 }
 
 void GameState::attach(Catalog* catalog, SeaRouter* router) {
@@ -368,13 +375,42 @@ void GameState::newGame() {
   }
 
 
-  // The rival powers, one per roster entry: each is given the real harbour nearest its own
-  // waters, an opening hull there and a treasury, and from then on it is an opponent with an
-  // economy like the player's rather than a wave of hulls spawned at anchors. Any hulls from a
-  // previous game are dropped first, so a restart cannot leave two hulls sharing an id.
+  // The two kinds of opponent, seeded into the same hull list. Any hulls from a previous game
+  // are dropped first, so a restart cannot leave two hulls sharing an id.
   botBoats_.clear();
   nextBoatId_ = 1;
+  // The pirate bands, one sentry per anchor: fixed obstacles on their own water that never
+  // move and own nothing. They are not players and are not in the faction roster.
+  seedPirates();
+  // The enemy powers, one per nation: each is given the real harbour nearest its own waters, an
+  // opening hull there and a treasury, and from then on it is an opponent with an economy like
+  // the player's. It buys everything it has; nothing is placed on an anchor for it.
   seedFactions();
+}
+
+void GameState::seedPirates() {
+  if (catalog_ == nullptr) return;
+
+  // Placed hull by hull on the band's stations. Nothing here is bought: a pirate hull is preset
+  // data armed from its kind, owned by the band, with no class and no yard, so it can never be
+  // reinforced, replaced or rearmed by an economy - it holds its patch until it is sunk.
+  for (const PirateBand& band : pirateBands()) {
+    for (const Anchor& anchor : band.anchors) {
+      BotBoat boat;
+      boat.id = nextBoatId_++;
+      boat.name = anchor.name;
+      boat.owner = band.name;
+      boat.pirate = true;
+      boat.classId = 0;    // a kind's own preset, not a class it was laid down from
+      boat.homePortId = 0; // no yard: a pirate band never rearms at a port
+      boat.position = anchor.position;
+      boat.station = anchor.position;
+      boat.headingDeg = anchor.heading;
+      boat.kind = anchor.kind;
+      fitBotArmament(boat);
+      botBoats_.push_back(std::move(boat));
+    }
+  }
 }
 
 std::vector<int> GameState::ownedPortIds() const {
@@ -390,33 +426,39 @@ std::vector<int> GameState::ownedVesselIds() const {
 }
 
 double GameState::passiveIncomePerSecond() const {
-  int vesselCost = 0;
+  int income = 0;
+
+  for (int portID: ownedPortIds()){
+    const Port* port = catalog_->portById(portID);
+    if (port == nullptr) continue;
+    income += 25 * port->activeFisher;
+  }
 
   for (const NavalUnit& navalVessel : navalUnits()) {
     if(navalVessel.type == "Unmanned vessel" ||
       navalVessel.type == "Patrol vessel"){
-        // vesselCost += 50 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income -= 50 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
       if(navalVessel.type == "Corvette"){
-        // vesselCost += 75 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income -= 75 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
       if(navalVessel.type == "Frigate"){
-        // vesselCost += 100 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income -= 100 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
       if(navalVessel.type == "Submarine"){
-        // vesselCost += 150 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income += 150 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
       if(navalVessel.type == "Destroyer"){
-        // vesselCost += 190 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income -= 190 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
       if(navalVessel.type == "Destroyer"){
-        // vesselCost += 250 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
+        // income -= 250 * (catalog_->navalVesselById(navalVessel.classId)->armament.size() * 1.5);
       }
   }
 
 
   const double raw = kPassiveIncomePerPortPerSecond * static_cast<double>(ownedPortCount())
-  - vesselCost;
+  + income;
 
   return std::round(raw * 100.0) / 100.0;
 }
@@ -1479,7 +1521,7 @@ void GameState::fitBotArmament(BotBoat& boat) const {
 }
 
 // ---------------------------------------------------------------------------
-// Rival powers
+// Enemy powers
 // ---------------------------------------------------------------------------
 
 void GameState::rearmBotBoat(BotBoat& boat, double dtSeconds) {
@@ -1530,13 +1572,12 @@ void GameState::seedFactions() {
   nextMerchantRunId_ = 1;
   if (catalog_ == nullptr) return;
 
-  // Every power is given the real harbour closest to its own waters - the first anchor of its
-  // roster entry - skipping the player's free port and any harbour another power already holds.
-  // From there on it lives off what that port and its trade earn: there is no anchor to respawn
-  // at and no hidden income.
-  const std::vector<BotFaction>& roster = botFactions();
+  // Every power is given the real harbour closest to its own waters, skipping the player's free
+  // port and any harbour another power already holds. From there on it lives off what that port
+  // and its trade earn: there is no anchor to respawn at and no hidden income.
+  const std::vector<EnemyPower>& roster = enemyPowers();
   for (size_t index = 0; index < roster.size(); ++index) {
-    const BotFaction& entry = roster[index];
+    const EnemyPower& entry = roster[index];
 
     AIPlayer power;
     power.name = entry.name;
@@ -1547,21 +1588,19 @@ void GameState::seedFactions() {
     power.researchTimer =
         kFactionResearchIntervalSeconds * (1.0 + 0.25 * static_cast<double>(index));
 
-    if (!entry.anchors.empty()) {
-      const LatLng waters = entry.anchors.front().position;
-      int bestPort = 0;
-      double bestKm = 1.0e18;
-      for (const Port& port : catalog_->ports()) {
-        if (port.id == kStarterPortId || !port.hasPosition()) continue;
-        if (factionOwningPort(port.id) >= 0) continue;
-        const double km = haversineKm(waters, port.position);
-        if (km < bestKm) {
-          bestKm = km;
-          bestPort = port.id;
-        }
+    const LatLng waters = entry.waters;
+    int bestPort = 0;
+    double bestKm = 1.0e18;
+    for (const Port& port : catalog_->ports()) {
+      if (port.id == kStarterPortId || !port.hasPosition()) continue;
+      if (factionOwningPort(port.id) >= 0) continue;
+      const double km = haversineKm(waters, port.position);
+      if (km < bestKm) {
+        bestKm = km;
+        bestPort = port.id;
       }
-      if (bestPort != 0) power.portIds.push_back(bestPort);
     }
+    if (bestPort != 0) power.portIds.push_back(bestPort);
 
     factions_.push_back(std::move(power));
   }
@@ -1935,6 +1974,17 @@ void GameState::advanceBotBoats(double dtSeconds) {
       continue;
     }
 
+    // A pirate holds its station. It has no yard to return to and no quarrel to pursue, so the
+    // hunt, the retreat and the rearm below - an enemy power's war effort - are not a pirate's:
+    // it sits where it was placed and shoots what comes inside its own gun range (see fire).
+    if (boat.pirate) {
+      boat.path.clear();
+      boat.targetUnitId = 0;
+      boat.retaliating = false;
+      boat.evading = false;
+      continue;
+    }
+
     const double reach = static_cast<double>(engagementRangeKm(boat.armament, kFireAuto));
     const double huntRadius = botHuntRadiusKm(reach);
     // A boat that was shot at holds its answer across a longer leash than one that merely
@@ -2174,9 +2224,11 @@ void GameState::updateCombat(double dtSeconds) {
       const double reach = static_cast<double>(engagementRangeKm(klass->armament, unit.fireOrder)) *
                            fleetBuffMultiplier(unit.id, AdmiralBuff::Range);
 
-      // No target at all: the posture decides whether the ship acquires one on its own.
+      // No target at all: the posture decides whether the ship acquires one on its own. A hull
+      // under an explicit bombard order does not take a boat on the way - the harbour is its
+      // business until the order is done - but it still answers whatever shoots at it.
       if (target == nullptr) {
-        if (unit.posture == kPostureAggressive) {
+        if (unit.targetPortId == 0 && unit.posture == kPostureAggressive) {
           // Aggressive ships engage the nearest boat inside the patrol radius, and their
           // acquired course means advanceNavalUnits closes the range for them.
           const int boatId = nearestEnemyBoat(unit.position);
@@ -2194,7 +2246,7 @@ void GameState::updateCombat(double dtSeconds) {
             }
             break;
           }
-        } else if (unit.posture == kPostureOffensive) {
+        } else if (unit.targetPortId == 0 && unit.posture == kPostureOffensive) {
           // Offensive ships fire on anything already inside their reach but keep their course.
           double bestKm = reach + 1.0;
           for (BotBoat& boat : botBoats_) {
@@ -2312,10 +2364,11 @@ void GameState::updateCombat(double dtSeconds) {
     }
   }
 
-  // The bot's boats shoot at whatever they can reach. Their gunners prefer the ship the hull
-  // is hunting, so a boat keeps its fire on one quarry instead of flickering between two
-  // hulls, and they open up as soon as a mount bears - not when the enemy is alongside. They
-  // do not spend the player's money: their magazines are the bot's own.
+  // Every bot hull shoots at whatever it can reach, pirates included: a pirate never moves, but
+  // it is a sentry, not a pacifist, so a ship inside its gun range is fired on. Their gunners
+  // prefer the ship the hull is hunting, so an enemy keeps its fire on one quarry instead of
+  // flickering between two hulls, and they open up as soon as a mount bears - not when the
+  // enemy is alongside. They do not spend the player's money: their magazines are the bot's own.
   for (BotBoat& boat : botBoats_) {
     if (boat.sunk()) continue;
 
@@ -3140,16 +3193,20 @@ std::string GameState::saveToJson() const {
     entry["id"] = boat.id;
     entry["name"] = boat.name;
     entry["owner"] = boat.owner;
+    entry["pirate"] = boat.pirate;
     entry["classId"] = boat.classId;
     entry["homePort"] = boat.homePortId;
     entry["kind"] = static_cast<int>(boat.kind);
     entry["maxHealth"] = boat.maxHealth;
     entry["defense"] = boat.defense;
     entry["health"] = boat.health;
-    // Bots steam after the player's ships, so where they are is part of the saved state: an
-    // enemy that was hunting must not snap back to its anchor on load.
+    // Bot hulls steam after the player's ships, so where they are is part of the saved state: an
+    // enemy that was hunting must not snap back to its berth on load, and a pirate must reload
+    // on the station it holds rather than wherever its band was seeded from.
     entry["lat"] = boat.position.lat;
     entry["lng"] = boat.position.lng;
+    entry["stationLat"] = boat.station.lat;
+    entry["stationLng"] = boat.station.lng;
     entry["heading"] = boat.headingDeg;
     entry["targetUnit"] = boat.targetUnitId;
     entry["retaliating"] = boat.retaliating;
@@ -3412,10 +3469,15 @@ bool GameState::loadFromJson(const std::string& text, std::string& error, double
       boat.id = entry.value("id", 0);
       boat.name = entry.value("name", std::string());
       boat.owner = entry.value("owner", std::string());
+      boat.pirate = entry.value("pirate", false);
       boat.classId = entry.value("classId", 0);
       boat.homePortId = entry.value("homePort", 0);
       boat.kind = static_cast<NavalModelKind>(entry.value("kind", 0));
       boat.position = {entry.value("lat", 0.0), entry.value("lng", 0.0)};
+      // A save written before stations existed has none, so a hull with no station recorded
+      // keeps the post it was reloaded on rather than snapping to the origin.
+      boat.station = {entry.value("stationLat", boat.position.lat),
+                      entry.value("stationLng", boat.position.lng)};
       boat.headingDeg = entry.value("heading", 0.0);
       boat.targetUnitId = entry.value("targetUnit", 0);
       boat.retaliating = entry.value("retaliating", false);

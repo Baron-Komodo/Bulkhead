@@ -535,21 +535,34 @@ int main() {
   check(!fresh.installPortModule(smallPort, 1, 600, error),
         "a module cannot be fitted in an unowned port");
 
-  // The rival powers: a new game gives each of them a real harbour in its own waters, a
-  // treasury and an opening hull laid down from the catalogue. Nothing about a rival comes
-  // from a spawn table any more - what it has on the water is what it could pay for.
-  check(fresh.factions().size() >= 2, "a new game seeds the rival powers");
+  // The enemy powers: a new game gives each of them a real harbour in its own waters, a
+  // treasury and an opening hull laid down from the catalogue. Nothing about a power comes
+  // from a spawn table - what it has on the water is what it could pay for.
+  check(fresh.factions().size() >= 2, "a new game seeds the enemy powers");
+  // Both kinds of hostile share the hull list: the powers' warships and the pirate sentries.
+  // A pirate is a preset hull holding a station - no class, no yard - so only an enemy power's
+  // hull has to name a catalogue class.
   bool everyPowerHasAHome = true;
   bool everyHullIsOwned = true;
   bool everyHullIsClassed = true;
+  bool everyPirateIsStationed = true;
+  size_t pirateHulls = 0;
   // One slot per NavalModelKind, so indexing this array by a hull kind never runs off its end.
   int kindCounts[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   for (const BotBoat& boat : fresh.botBoats()) {
     if (boat.owner.empty() || boat.name.empty()) everyHullIsOwned = false;
+    kindCounts[static_cast<int>(boat.kind)] += 1;
+    if (boat.pirate) {
+      ++pirateHulls;
+      if (haversineKm(boat.position, boat.station) > 1.0 || boat.classId != 0 ||
+          boat.homePortId != 0) {
+        everyPirateIsStationed = false;
+      }
+      continue;
+    }
     if (boat.classId == 0 || catalog.navalVesselById(boat.classId) == nullptr) {
       everyHullIsClassed = false;
     }
-    kindCounts[static_cast<int>(boat.kind)] += 1;
   }
   for (size_t index = 0; index < fresh.factions().size(); ++index) {
     const int home = fresh.factionHomePort(static_cast<int>(index));
@@ -559,8 +572,10 @@ int main() {
     }
   }
   check(everyPowerHasAHome, "every power holds the harbour nearest its own waters");
-  check(everyHullIsOwned, "every rival hull names its power and its own name");
-  check(everyHullIsClassed, "every rival hull was laid down from a catalogue class");
+  check(everyHullIsOwned, "every hostile hull names its owner and its own name");
+  check(everyHullIsClassed, "every enemy hull was laid down from a catalogue class");
+  check(pirateHulls > 0 && everyPirateIsStationed,
+        "a pirate hull holds its station with no class and no yard");
   check(fresh.botBoats().size() >= fresh.factions().size(),
         "every power starts with something afloat");
   check(fresh.factionOwningPort(kStarterPortId) < 0, "the player's free port is not a power's");
@@ -810,11 +825,13 @@ int main() {
   // -----------------------------------------------------------------------
   std::cout << "\nbot aggression\n";
 
-  // A corsair reacts to traffic in its own stretch of water, or to a hull that has shot at it.
-  // It must not steam across the sea after a ship that merely exists somewhere: the flat
-  // 1200 km hunt radius it used to have had a boat off Algiers chasing anything between
+  // An enemy hull reacts to traffic in its own stretch of water, or to a hull that has shot at
+  // it. It must not steam across the sea after a ship that merely exists somewhere: the flat
+  // 1200 km hunt radius the bots used to have had a boat off Algiers chasing anything between
   // Gibraltar and Cyprus. A hull is put on a chosen station by saving, editing its position
-  // and reloading, which is the only way to place a ship on an arbitrary patch of water.
+  // and reloading, which is the only way to place a ship on an arbitrary patch of water. A
+  // pirate band is the other kind of hostile and never hunts at all, so the probe is anchored
+  // to a power's warship rather than to a sentry that holds station by design.
   {
     int corsairId = 0;
     LatLng corsairStation{0.0, 0.0};
@@ -823,13 +840,13 @@ int main() {
       pick.attach(&catalog, &router);
       pick.newGame();
       for (const BotBoat& boat : pick.botBoats()) {
-        if (boat.owner != "Barbary corsairs") continue;
+        if (boat.pirate) continue;  // a sentry holds station; only an enemy hull hunts
         corsairId = boat.id;
         corsairStation = boat.position;
         break;
       }
     }
-    check(corsairId != 0, "the Barbary corsairs are at sea");
+    check(corsairId != 0, "an enemy power's hull is at sea");
 
     // Every boat carries an id of its own. The factions are spawned one after another, and a
     // repeated id makes every id-keyed lookup - botBoatById, the hunt, the kill feed, the
@@ -896,13 +913,12 @@ int main() {
     check(fleetSave.contains("navalUnits") && !fleetSave["navalUnits"].empty(),
           "a save carries the hulls");
 
-    // Where the corsair actually is in this game, rather than where it started: a rival hull
-    // that has been hunting the player's ships is not sitting on its home berth any more, and
-    // a probe staged on the old station would be staged on empty water.
+    // Where that hull actually is in this game, rather than where it started: an enemy that
+    // has been hunting the player's ships is not sitting on its home berth any more, and a
+    // probe staged on the old station would be staged on empty water.
     for (const auto& boat : fleetSave["botBoats"]) {
-      if (boat.value("owner", std::string()) != "Barbary corsairs") continue;
+      if (boat.value("id", 0) != corsairId) continue;
       if (boat.value("health", 0.0f) <= 0.0f) continue;
-      corsairId = boat.value("id", corsairId);
       corsairStation = {boat.value("lat", corsairStation.lat),
                         boat.value("lng", corsairStation.lng)};
       break;
@@ -981,9 +997,12 @@ int main() {
       }
     }
 
-    // Gibraltar is 778 km from the nearest corsair: well outside any corsair's lookouts.
+    // A station far out in open ocean, more than 800 km from every hull on the map bar none:
+    // past the longest sweep any hull watches (a lookout is capped at 400 km), so nothing
+    // should pick the ship up.
+    const LatLng farStation{43.0, -18.0};
     GameState farSea;
-    const int farUnitId = stage(fleetSave, LatLng{36.0, -5.35}, farSea);
+    const int farUnitId = stage(fleetSave, farStation, farSea);
     bool farHunted = false;
     for (const BotBoat& boat : farSea.botBoats()) {
       if (boat.targetUnitId == farUnitId) farHunted = true;
@@ -999,22 +1018,22 @@ int main() {
     const BotBoat* nearCorsair = nearSea.botBoatById(corsairId);
     check(nearUnitId != 0 && nearCorsair != nullptr &&
               nearCorsair->targetUnitId == nearUnitId,
-          "a corsair hunts traffic in its own waters");
+          "an enemy hull hunts traffic in its own waters");
 
     // And a hull that opens fire from beyond that water is answered anyway: being attacked is
     // its own trigger, and the answer is allowed to run further than the lookouts.
     GameState shotSea;
-    const int shotUnitId = stage(fleetSave, LatLng{36.0, -5.35}, shotSea);
+    const int shotUnitId = stage(fleetSave, farStation, shotSea);
     std::string attackError;
     check(shotUnitId != 0 && shotSea.orderNavalUnitAttack(shotUnitId, corsairId, attackError),
-          "a hull is sent at a corsair from far off");
+          "a hull is sent at an enemy warship from far off");
     bool answered = false;
     for (int tick = 0; tick < 80 && !answered; ++tick) {
       shotSea.update(1000.0 + 250.0 * (tick + 1));
       const BotBoat* boat = shotSea.botBoatById(corsairId);
       answered = boat != nullptr && boat->retaliating && boat->targetUnitId == shotUnitId;
     }
-    check(answered, "a corsair turns on the hull that shoots it, however far off");
+    check(answered, "an enemy hull turns on the hull that shoots it, however far off");
 
     // A ship shoots at the cadence its mounts are rated at, not at the catalog's single load
     // time for the whole weapon type. A hull is dropped on the corsair's water, the corsair
@@ -1129,7 +1148,7 @@ int main() {
     world.attach(&catalog, &router);
     world.newGame();
 
-    check(world.factions().size() >= 2, "a new game seeds the rival powers");
+    check(world.factions().size() >= 2, "a new game seeds the enemy powers");
 
     std::vector<int> homes;
     bool everyPowerHasAHome = true;
@@ -1145,10 +1164,13 @@ int main() {
     check(everyPowerHasAHome, "every power is given a harbour in its own waters");
     check(homesAreDistinct, "the powers do not share a harbour");
 
-    // The opening navy: one hull each, laid down from the catalogue and owned by its power.
+    // The opening navy: one hull each, laid down from the catalogue and owned by its power. A
+    // pirate sentry is not part of it - it is a preset hull on a station, with no class and no
+    // yard - so only the powers' hulls are checked here.
     bool everyHullIsClassed = true;
     bool everyHullIsOwned = true;
     for (const BotBoat& boat : world.botBoats()) {
+      if (boat.pirate) continue;
       if (boat.classId == 0 || catalog.navalVesselById(boat.classId) == nullptr) {
         everyHullIsClassed = false;
       }
@@ -1157,8 +1179,8 @@ int main() {
       }
     }
     check(!world.botBoats().empty(), "the powers put a hull in the water at the start");
-    check(everyHullIsClassed, "a rival hull comes from a catalogue class");
-    check(everyHullIsOwned, "a rival hull names its power and its yard");
+    check(everyHullIsClassed, "an enemy hull comes from a catalogue class");
+    check(everyHullIsOwned, "an enemy hull names its power and its yard");
 
     // Income. Nothing can be bought in the first twenty seconds - the build clocks have not
     // come round and no power can afford a hull yet - so the treasury can only move one way.
@@ -1207,18 +1229,26 @@ int main() {
     check(researchedSomething, "the powers file research from their crossings");
     check(naviesWithinCap, "a power never keeps more hulls than its ports support");
 
-    // A rival's navy is its own money: sinking a hull takes it out of that power's order of
+    // An enemy navy is its own money: sinking a hull takes it out of that power's order of
     // battle until it pays for another one. The loss is written into a save and reloaded, which
-    // is how a hull is removed without staging a battle.
-    if (!world.botBoats().empty()) {
-      const BotBoat& doomed = world.botBoats().front();
+    // is how a hull is removed without staging a battle. A pirate has no order of battle, so
+    // the doomed hull is drawn from a power's navy.
+    const BotBoat* doomedBoat = nullptr;
+    for (const BotBoat& boat : world.botBoats()) {
+      if (boat.pirate) continue;
+      doomedBoat = &boat;
+      break;
+    }
+    if (doomedBoat != nullptr) {
       int ownerIndex = -1;
       for (size_t index = 0; index < world.factions().size(); ++index) {
-        if (world.factions()[index].name == doomed.owner) ownerIndex = static_cast<int>(index);
+        if (world.factions()[index].name == doomedBoat->owner) {
+          ownerIndex = static_cast<int>(index);
+        }
       }
-      check(ownerIndex >= 0, "every rival hull belongs to a seeded power");
+      check(ownerIndex >= 0, "every enemy hull belongs to a seeded power");
       if (ownerIndex >= 0) {
-        const int lostId = doomed.id;
+        const int lostId = doomedBoat->id;
         const int homePortId = world.factionHomePort(ownerIndex);
         const int navyBefore = world.factionShipCount(ownerIndex);
 
@@ -1243,6 +1273,153 @@ int main() {
         check(afterKill.factions().size() == world.factions().size(), "the powers survive a save");
         check(afterKill.merchantRuns().size() == world.merchantRuns().size(),
               "the merchant crossings survive a save");
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  std::cout << "\npirates and enemies\n";
+  {
+    // The two kinds of hostile are not the same thing. A pirate band is a fixed group of hulls
+    // placed on anchor stations: it owns nothing, buys nothing, takes nothing and never leaves
+    // its patch. An enemy power is a player - it holds ports, trades, researches and builds -
+    // and it is not a pirate band.
+    GameState sea;
+    sea.attach(&catalog, &router);
+    sea.newGame();
+
+    check(!pirateBands().empty(), "the fixed pirate roster is not empty");
+    size_t expectedPirates = 0;
+    for (const PirateBand& band : pirateBands()) expectedPirates += band.anchors.size();
+
+    size_t pirateHulls = 0;
+    bool everyPirateOnStation = true;
+    bool everyPirateFliesItsBand = true;
+    bool piratesOwnNothing = true;
+    bool piratesAreArmed = true;
+    for (const BotBoat& boat : sea.botBoats()) {
+      if (!boat.pirate) continue;
+      ++pirateHulls;
+      if (haversineKm(boat.position, boat.station) > 1.0) everyPirateOnStation = false;
+      if (boat.homePortId != 0 || boat.classId != 0) piratesOwnNothing = false;
+      if (boat.armament.empty()) piratesAreArmed = false;
+      bool knownBand = false;
+      for (const PirateBand& band : pirateBands()) {
+        if (band.name == boat.owner) knownBand = true;
+      }
+      for (const AIPlayer& power : sea.factions()) {
+        if (power.name == boat.owner) knownBand = false;  // a band is not a power
+      }
+      if (!knownBand) everyPirateFliesItsBand = false;
+    }
+    check(pirateHulls == expectedPirates, "one hull is placed on every pirate anchor");
+    check(everyPirateOnStation, "a pirate hull starts on its own station");
+    check(everyPirateFliesItsBand,
+          "a pirate hull flies its band's name and is no enemy power's");
+    check(piratesOwnNothing, "a pirate hull has no class and no yard");
+    check(piratesAreArmed, "a pirate sentry is armed, so it can fire from its station");
+
+    // A band is static. A minute of the game running - while the powers trade, build and
+    // research around it - must not move a single pirate off the station it was placed on, and
+    // must not make it hunt: it is a fixed obstacle, not a hunter.
+    std::vector<LatLng> stations;
+    for (const BotBoat& boat : sea.botBoats()) {
+      if (boat.pirate) stations.push_back(boat.station);
+    }
+    double clock = 0.0;
+    for (int tick = 0; tick < 240; ++tick) {  // 60 s at a quarter second a tick
+      clock += 250.0;
+      sea.update(clock);
+    }
+    bool stayedPut = true;
+    bool neverHunted = true;
+    size_t seen = 0;
+    for (const BotBoat& boat : sea.botBoats()) {
+      if (!boat.pirate) continue;
+      if (seen >= stations.size() || haversineKm(boat.position, stations[seen]) > 1.0) {
+        stayedPut = false;
+      }
+      if (boat.targetUnitId != 0) neverHunted = false;
+      ++seen;
+    }
+    check(stayedPut && seen == expectedPirates, "a pirate band holds its station over time");
+    check(neverHunted, "a pirate never picks a ship to hunt");
+
+    // A power, by contrast, is dynamic: it earns from its ports and lays hulls down while the
+    // bands sit still. That contrast is the whole point of the split.
+    bool powersBuilt = false;
+    const size_t powerHullsAtStart = sea.botBoats().size() - expectedPirates;
+    for (int tick = 0; tick < 1440 && !powersBuilt; ++tick) {  // six more minutes
+      clock += 250.0;
+      sea.update(clock);
+      size_t powerHulls = 0;
+      for (const BotBoat& boat : sea.botBoats()) {
+        if (!boat.pirate) ++powerHulls;
+      }
+      if (powerHulls > powerHullsAtStart) powersBuilt = true;
+    }
+    check(powersBuilt, "the enemy powers keep building while the pirates sit still");
+
+    // A pirate is a sentry, not a pacifist. It never moves, but a ship laid inside its gun
+    // range is fired on. The hull is put on the pirate's own station through a save, the only
+    // way to place a ship on an arbitrary patch of water, and left in a defensive posture so
+    // anything it takes is the sentry's doing rather than a return shot of its own.
+    LatLng watchStation{0.0, 0.0};
+    int watchPirateId = 0;
+    for (const BotBoat& boat : sea.botBoats()) {
+      if (!boat.pirate) continue;
+      watchPirateId = boat.id;
+      watchStation = boat.station;
+      break;
+    }
+    check(watchPirateId != 0, "a pirate sentry is on the map");
+
+    sea.changeMoney(200000.0);
+    std::string yardError;
+    check(sea.installPortModule(kStarterPortId, 2, 0, yardError),
+          "fit a shipyard for the sentry probe");
+    bool laidDown = false;
+    for (const NavalVessel& vessel : catalog.navalVessels()) {
+      if (vessel.armament.empty()) continue;
+      if (sea.buildNavalUnit(vessel.id, kStarterPortId, 0.0, yardError)) {
+        laidDown = true;
+        break;
+      }
+    }
+    check(laidDown, "a hull is available for the sentry probe");
+
+    if (laidDown && watchPirateId != 0 && !sea.navalUnits().empty()) {
+      nlohmann::json root = nlohmann::json::parse(sea.saveToJson());
+      nlohmann::json hull = root["navalUnits"].back();
+      hull["lat"] = watchStation.lat;
+      hull["lng"] = watchStation.lng;
+      hull["path"] = nlohmann::json::array();
+      hull["targetBoat"] = 0;
+      root["navalUnits"] = nlohmann::json::array({hull});
+      root["fleets"] = nlohmann::json::array();
+
+      GameState sentry;
+      sentry.attach(&catalog, &router);
+      std::string sentryError;
+      check(sentry.loadFromJson(root.dump(), sentryError, 0.0), "the sentry probe loads");
+
+      const BotBoat* watch = sentry.botBoatById(watchPirateId);
+      check(watch != nullptr && watch->pirate, "the sentry survives the save as a pirate");
+      if (watch != nullptr && !sentry.navalUnits().empty()) {
+        const LatLng heldBefore = watch->position;
+        const float hullBefore = sentry.navalUnits().front().health;
+        const int probeId = sentry.navalUnits().front().id;
+        sentry.setPosture({probeId}, kPostureDefensive);
+        for (int tick = 0; tick < 12; ++tick) sentry.update(1000.0 * (tick + 1));
+
+        const BotBoat* fired = sentry.botBoatById(watchPirateId);
+        const NavalUnit* probe = sentry.navalUnitById(probeId);
+        check(fired != nullptr && haversineKm(fired->position, heldBefore) < 1.0,
+              "a pirate sentry holds its station under fire");
+        check(probe != nullptr && probe->health < hullBefore,
+              "a pirate sentry fires at a ship inside its gun range");
+        check(fired != nullptr && fired->targetUnitId == 0,
+              "a pirate sentry never hunts the ship it shoots at");
       }
     }
   }

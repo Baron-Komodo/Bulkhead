@@ -110,6 +110,9 @@ struct Port {
   std::vector<PortModules> modules;
   int totalSlotAvailable = 0;
 
+  int maxFisher = 2;
+  int activeFisher = 0;
+
   bool hasModule(int id) const {
     for(PortModules fitModule:  modules){
       if(fitModule.module_id == id){

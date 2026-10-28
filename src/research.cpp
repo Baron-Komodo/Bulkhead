@@ -38,6 +38,11 @@ const std::vector<Technology>& technologies() {
       {"cranes", "Automated Cranes",
        "Robotic loading crews turn vessels around faster, shortening every voyage.",
        {60, 140, 280}},
+
+             {"fishing", "Fishing",
+       "You can spawn fisher near to your port that will increase your passive income",
+       {50, 180, 360}, {}},
+
               {"boat_armoring1", "Boat Armoring I",
        "Give better defense and resistance to critikal attack for boat",
        {80, 180, 360}, {"steel"}},
@@ -155,6 +160,8 @@ const std::vector<Technology>& technologies() {
        "Rockets are heavier to load but are doing much more damage to an ennemy",
        {80, 180, 360}, { "microship", "ballistic"}},
        //ships
+
+
 
 
        {"boat_armoring2", "Boat Armoring II",
